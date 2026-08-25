@@ -34,9 +34,10 @@ health-rag/
 ├── models/                   # 本地模型（gitignore）
 ├── prompts/                  # system / rag prompt 模板
 ├── scripts/
-│   ├── ingest.py             # 一键摄入语料
-│   ├── download_model.py     # 下载 embedding 模型
-│   └── download_reranker.py  # 下载重排模型
+│   ├── ingest.py                 # 一键摄入语料
+│   ├── download_model.py         # 下载 embedding 模型
+│   ├── download_reranker.py      # 下载重排模型
+│   └── export_embedding_model.py # 导出 embedding 模型到 models/（Docker 用）
 ├── src/health_rag/
 │   ├── api/                  # main.py / schemas.py / middleware.py
 │   ├── config/               # settings.py / logging.py
@@ -48,7 +49,10 @@ health-rag/
 │   ├── retrieval/            # HealthRetriever
 │   └── vectorstore/          # ChromaVectorStore
 ├── tests/                    # 68 个测试
+├── .dockerignore
 ├── .env.example
+├── Dockerfile                # API 镜像（python:3.12-slim + 非 root + 健康检查）
+├── docker-compose.yml        # 容器编排（端口/env_file/模型卷）
 ├── pyproject.toml
 ├── requirements.txt
 └── README.md
@@ -134,6 +138,44 @@ python evaluation/generation_eval.py   # 生成层（需要 DEEPSEEK_API_KEY）
 - `logs/app.log`：JSON Lines 结构化日志（5MB 轮转 × 5 份）
 - 每个请求自动生成 `request_id`，客户端可通过 `X-Request-ID` 头传入并原样回传
 
+## Docker 容器化
+
+### 前置准备（一次性）
+
+1. 创建 `.env`（参考 `.env.example`），填入 `DEEPSEEK_API_KEY`
+2. 模型放入 `./models/`：
+   ```bash
+   python scripts/download_reranker.py        # bge-reranker-base
+   python scripts/download_model.py           # bge-small-zh-v1.5 → HF 缓存
+   python scripts/export_embedding_model.py   # 从缓存导出到 models/（容器必需）
+   ```
+   `.env` 中应配置：
+   ```
+   EMBEDDING_MODEL_PATH=models/bge-small-zh-v1.5
+   RERANKER_MODEL=models/bge-reranker-base
+   ```
+3. 语料已摄入到 `./data/vector_store/`（`python scripts/ingest.py data/raw/`）
+
+### 构建与运行
+
+```bash
+docker compose up -d --build    # 构建并后台启动
+docker compose ps               # 查看健康状态
+docker compose logs -f api      # 查看日志
+docker compose down             # 停止
+```
+
+- API 地址：`http://<主机>:8000`，文档 `http://<主机>:8000/docs`
+- 模型/向量库/日志通过卷挂载（`./models` `./data` `./logs`），**镜像重建不丢失**
+- 容器以非 root 用户（UID 1000）运行；服务器上如遇权限问题：
+  `sudo chown -R 1000:1000 models data logs`
+
+### 镜像说明
+
+- 基础镜像 `python:3.12-slim`，与本地开发一致
+- pip 默认走清华镜像（`ARG PIP_INDEX_URL` 可覆盖，海外部署可换官方源）
+- 不含模型/语料/密钥，适合推送到仓库分发
+
 ## Roadmap
 
 - [x] Embedding 本地化
@@ -143,7 +185,7 @@ python evaluation/generation_eval.py   # 生成层（需要 DEEPSEEK_API_KEY）
 - [x] RAG 评估
 - [x] FastAPI 服务化
 - [x] 日志系统
-- [ ] Docker 容器化
+- [x] Docker 容器化（配置就绪；镜像构建需 Docker 环境）
 - [ ] CI/CD
 - [ ] 部署
 - [ ] 与饮食管理系统集成

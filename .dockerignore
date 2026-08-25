@@ -1,0 +1,27 @@
+# ============ 版本控制 ============
+.git
+.gitignore
+
+# ============ Python 缓存 ============
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# ============ 敏感/运行数据（不进镜像，运行时用卷挂载） ============
+.env
+.env.*
+models/
+data/
+logs/
+
+# ============ 非运行时代码（保持镜像精简） ============
+tests/
+evaluation/
+scripts/
+docs/
+README.md
+Dockerfile
+docker-compose.yml

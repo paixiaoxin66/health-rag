@@ -1,0 +1,33 @@
+# ============================================================
+# health-rag 容器编排
+#
+# 使用：
+#   docker compose up -d --build     # 构建并启动
+#   docker compose ps                # 查看健康状态
+#   docker compose logs -f api       # 查看日志
+#   docker compose down              # 停止
+#
+# 运行前准备（详见 README）：
+#   1. 创建 .env（参考 .env.example），填入 DEEPSEEK_API_KEY
+#   2. 模型放 ./models/（含 bge-small-zh-v1.5 与 bge-reranker-base）
+#   3. 语料已摄入到 ./data/vector_store/
+#   （服务器上如遇权限问题：sudo chown -R 1000:1000 models data logs）
+# ============================================================
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: health-rag:latest
+    container_name: health-rag-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      # 模型/向量库/日志挂在宿主机，镜像重建不丢失、不重下
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
