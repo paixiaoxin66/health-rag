@@ -13,12 +13,19 @@ class Settings(BaseSettings):
 
     # Embedding
     embedding_model: str = "BAAI/bge-small-zh-v1.5"
+    embedding_model_path: str = ""
     embedding_device: str = "cpu"
+    embedding_local_only: bool = True
 
     # RAG
     chunk_size: int = 500
     chunk_overlap: int = 50
     top_k: int = 5
+
+    # Reranker
+    reranker_model: str = "BAAI/bge-reranker-base"
+    reranker_local_only: bool = True
+    recall_k: int = 20
 
     # Vector store
     vector_store_type: str = "chroma"
@@ -26,11 +33,18 @@ class Settings(BaseSettings):
 
     # LLM
     llm_provider: str = "deepseek"
-    llm_model: str = "deepseek-chat"
+    llm_model: str = "deepseek-v4-flash"
     deepseek_api_key: str = ""
+    deepseek_base_url: str = (
+        "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    )
 
     # Hugging Face
     hf_token: str = ""
+
+    # Logging
+    log_level: str = "INFO"
+    log_file: str = "logs/app.log"
 
     model_config = SettingsConfigDict(
         env_file=".env",
